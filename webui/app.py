@@ -75,7 +75,7 @@ with tab1:
                     st.success(f"'{os.path.basename(file_path)}' を削除しました")
                 except Exception as e:
                     st.error(f"'{os.path.basename(file_path)}' の削除に失敗しました: {e}")
-            st.experimental_rerun()
+            st.rerun()
     else:
         st.info("音声ファイルがありません。ファイルをアップロードしてください。")
 
@@ -151,7 +151,7 @@ with tab2:
                     st.success(f"'{os.path.basename(file_path)}' を削除しました")
                 except Exception as e:
                     st.error(f"'{os.path.basename(file_path)}' の削除に失敗しました: {e}")
-            st.experimental_rerun()
+            st.rerun()
     else:
         st.info("文字起こし結果がありません。音声ファイルをアップロードして文字起こしを実行してください。")
 
@@ -240,7 +240,7 @@ with tab3:
                     st.success(f"'{os.path.basename(file_path)}' を削除しました")
                 except Exception as e:
                     st.error(f"'{os.path.basename(file_path)}' の削除に失敗しました: {e}")
-            st.experimental_rerun()
+            st.rerun()
     else:
         st.info("要約結果がありません。文字起こし結果から要約を生成してください。")
 
@@ -335,7 +335,7 @@ with tab4:
     if auto_refresh:
         st.info("10秒ごとに自動更新しています...")
         time.sleep(10)
-        st.experimental_rerun()
+        st.rerun()
 
 # フッター
 st.markdown("---")
