@@ -1,4 +1,8 @@
-audio_files/*
-output_files/*
-summary_files/*
+# .getkeep以外
+audio_files/**
+!audio_files/**.gitkeep
+output_files/**
+!output_files/**.gitkeep
+summary_files/**
+!summary_files/**.gitkeep
 .idea
