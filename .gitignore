@@ -1,0 +1,4 @@
+audio_files/*
+output_files/*
+summary_files/*
+.idea
