@@ -1,59 +1,26 @@
-version: '3.8'
+version: '3'
 
 services:
   whisper:
     build:
       context: ./whisper
       dockerfile: Dockerfile
-    container_name: whisper
     volumes:
-      - ./audio_files:/app/audio_files
-      - ./output_files:/app/output_files
-    restart: always
-    command: python auto_transcribe.py
-    environment:
-      - MODEL_SIZE=base      # GPUがない場合はsmallかbaseを使用
-      - LANGUAGE=ja          # 言語指定 (ja, en, auto など)
-      - INTERVAL=60          # 監視間隔 (秒)
-      - OUTPUT_FORMAT=txt    # 出力形式 (txt, srt, vtt, json など)
-      - DEVICE=cpu           # CPUを使用するように明示的に設定
-
-  # シンプルな要約サービス
-  summarizer:
-    build:
-      context: ./summarizer
-      dockerfile: Dockerfile
-    container_name: text-summarizer
-    volumes:
-      - ./output_files:/app/output_files
-      - ./summary_files:/app/summary_files
-    restart: always
-    command: python summarize.py
-    environment:
-      - INTERVAL=60          # 監視間隔 (秒)
-      - MAX_LENGTH=200       # 要約の最大長 (文字数)
-      - MIN_LENGTH=50        # 要約の最小長 (文字数)
-      - SUMMARY_RATIO=0.3    # 要約率 (元テキストに対する比率)
-      - TRIGGER_EXTENSION=txt # 監視対象のファイル拡張子
-
-  # Webコントロールパネル
-  webui:
-    build:
-      context: ./webui
-      dockerfile: Dockerfile
-    container_name: whisper-webui
+      - ./data:/data
+      - ./models:/models
     ports:
-      - "8501:8501"
-    volumes:
-      - ./audio_files:/app/audio_files
-      - ./output_files:/app/output_files
-      - ./summary_files:/app/summary_files
-    depends_on:
-      - whisper
-      - summarizer
-    restart: always
+      - "${PORT:-9999}:80"
+    environment:
+      - MODEL_SIZE=${MODEL_SIZE:-medium}
+      - LANGUAGE=${LANGUAGE:-ja}
+    restart: unless-stopped
+    # 初期化スクリプトを実行
+    entrypoint: >
+      bash -c "
+        mkdir -p /data/uploads /data/processed /data/exports /data/logs /data/config &&
+        chown -R www-data:www-data /data /models &&
+        apache2-foreground
+      "
 
 volumes:
-  audio_files:
-  output_files:
-  summary_files:
+  models:

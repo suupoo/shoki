@@ -1,8 +1,5 @@
 # .getkeep以外
-audio_files/**
-!audio_files/**.gitkeep
-output_files/**
-!output_files/**.gitkeep
-summary_files/**
-!summary_files/**.gitkeep
+data
+models
 .idea
+.env

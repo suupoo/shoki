@@ -1,235 +1,216 @@
-# Whisper & テキスト要約システム
+# 議事録自動生成システム - セットアップ手順（最終版）
 
-音声ファイルから自動的に文字起こしを行い、その結果を要約するDocker Compose環境のシステムです。
+以下の簡単な手順で議事録自動生成システムをセットアップできます。test.phpの内容をindex.phpに統合し、より簡潔なURLでアクセスできるようになりました。
 
-## システム概要
+## 1. ファイル構造の作成
 
-このシステムは以下の3つの主要コンポーネントで構成されています：
+以下のファイル構造を作成します：
 
-1. **Whisper サービス** - OpenAIのWhisperモデルを使用した音声認識エンジン
-2. **テキスト要約サービス** - 統計的手法を用いたテキスト要約エンジン
-3. **Web UI** - ユーザーフレンドリーなウェブインターフェース
-
-## インストール方法
-
-### 前提条件
-
-- Docker と Docker Compose がインストールされていること
-
-### セットアップ
-
-1. リポジトリをクローンします：
-
-```bash
-git clone https://github.com/your-username/whisper-summarize-system.git
-cd whisper-summarize-system
+```
+議事録自動生成システム/
+├── docker-compose.yml
+├── .env
+└── whisper/
+    ├── Dockerfile
+    ├── php.ini
+    ├── index.php
+    └── api.php
 ```
 
-2. 必要なディレクトリを作成します：
+## 2. 各ファイルを以下の内容で作成します：
 
-```bash
-mkdir -p audio_files output_files summary_files
+### docker-compose.yml
+
+```yaml
+version: '3'
+
+services:
+  whisper:
+    build:
+      context: ./whisper
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/data
+      - ./models:/models
+    ports:
+      - "${PORT:-9999}:80"
+    environment:
+      - MODEL_SIZE=${MODEL_SIZE:-medium}
+      - LANGUAGE=${LANGUAGE:-ja}
+    restart: unless-stopped
+    # 初期化スクリプトを実行
+    entrypoint: >
+      bash -c "
+        mkdir -p /data/uploads /data/processed /data/exports /data/logs /data/config /data/cache &&
+        chown -R www-data:www-data /data /models &&
+        chmod -R 775 /data /models &&
+        apache2-foreground
+      "
+
+volumes:
+  models:
 ```
 
-3. システムを起動します：
+### .env
+
+```
+# ポート設定
+PORT=9999
+
+# 音声認識設定
+MODEL_SIZE=medium
+LANGUAGE=ja
+```
+
+### whisper/Dockerfile
+
+```dockerfile
+FROM php:8.3-apache
+
+WORKDIR /var/www/html
+
+# システムの依存関係をインストール
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    build-essential \
+    python3 \
+    python3-pip \
+    python3-dev \
+    python3-venv \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# PHPの拡張機能をインストール
+RUN docker-php-ext-install \
+    mysqli \
+    zip \
+    gd \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath
+
+# Python仮想環境を作成（外部管理環境の問題を回避）
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# OpenAI Whisperのインストール（公式パッケージ）
+RUN pip3 install --upgrade pip && \
+    pip3 install --no-cache-dir openai-whisper
+
+# Apacheの設定を更新
+RUN a2enmod rewrite
+
+# PHP設定をカスタマイズ
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+# PHPカスタム設定ファイルをコピー
+COPY php.ini /usr/local/etc/php/conf.d/custom.ini
+
+# アップロードサイズの上限を設定
+RUN echo "upload_max_filesize = 500M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 500M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "memory_limit = 512M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "max_execution_time = 900" >> /usr/local/etc/php/conf.d/uploads.ini
+
+# タイムゾーンの設定
+RUN echo "date.timezone = Asia/Tokyo" >> /usr/local/etc/php/conf.d/timezone.ini
+
+# ディレクトリの作成
+RUN mkdir -p /models /data /data/uploads /data/processed /data/exports /data/logs /data/config /data/cache
+
+# キャッシュディレクトリの作成と権限設定（Permission denied問題を解決）
+ENV XDG_CACHE_HOME=/data/cache
+
+# PHPファイルをコピー
+COPY index.php api.php /var/www/html/
+
+# ディレクトリの権限を設定（修正: www-dataユーザーに十分な権限を付与）
+RUN chown -R www-data:www-data /var/www/html /data /models && \
+    chmod -R 775 /data /models
+
+# 環境変数の設定
+ENV MODEL_SIZE=medium
+ENV LANGUAGE=ja
+ENV PYTHONPATH=/opt/venv/lib/python3.*/site-packages
+
+# ポートの公開
+EXPOSE 80
+
+# Apacheの起動
+CMD ["apache2-foreground"]
+```
+
+### whisper/php.ini
+
+```ini
+[PHP]
+; 最大実行時間を拡大（音声処理のため）
+max_execution_time = 300
+max_input_time = 300
+
+; エラー表示設定
+display_errors = Off
+display_startup_errors = Off
+log_errors = On
+error_log = /data/logs/php_errors.log
+
+; 日本語関連設定
+default_charset = "UTF-8"
+mbstring.language = Japanese
+mbstring.internal_encoding = UTF-8
+
+; セキュリティ設定
+expose_php = Off
+allow_url_fopen = On
+allow_url_include = Off
+
+; アップロード設定
+file_uploads = On
+upload_max_filesize = 500M
+post_max_size = 500M
+max_file_uploads = 20
+
+; メモリ設定
+memory_limit = 512M
+```
+
+### whisper/index.php および whisper/api.php
+
+前述のコードを使用してファイルを作成してください。
+- index.php: メインのフォーム画面を含むHTMLコード
+- api.php: 音声認識処理を行うPHPコード
+
+## 3. セットアップの実行
+
+セットアップはとても簡単です：
 
 ```bash
 docker-compose up -d
 ```
 
-4. ウェブブラウザで以下のURLにアクセスします：
+これだけ！必要なディレクトリはすべて自動的に作成され、サービスが起動します。
+
+## 4. 使用方法
+
+ブラウザで以下のURLにアクセスします：
 
 ```
-http://localhost:8501
+http://localhost:9999
 ```
 
-## ユーザーマニュアル
+フォームから音声ファイルをアップロードし、「文字起こしを実行」ボタンをクリックすれば処理が始まります。
 
-### 目次
+## 5. 注意点
 
-1. [システムへのアクセス方法](#システムへのアクセス方法)
-2. [基本的な使い方](#基本的な使い方)
-3. [各機能の詳細](#各機能の詳細)
-4. [よくある質問](#よくある質問)
-5. [トラブルシューティング](#トラブルシューティング)
-
-### システムへのアクセス方法
-
-お使いのウェブブラウザで以下のURLを開きます：
-```
-http://localhost:8501
-```
-
-### 基本的な使い方
-
-#### 文字起こしまでの基本的な流れ
-
-1. 「ファイルアップロード」タブを選択
-2. 「ファイルを選択」ボタンをクリックして、音声ファイルを選択
-3. 音声ファイルがアップロードされ、自動的に文字起こし処理が開始される
-4. 処理が完了すると「文字起こし結果」タブに結果が表示される
-
-#### 要約までの基本的な流れ
-
-1. 「文字起こし結果」タブで、要約したい文字起こしファイルを選択
-2. 「このファイルを要約する」ボタンをクリック
-3. 要約処理が完了すると「要約結果」タブに結果が表示される
-
-### 各機能の詳細
-
-#### ファイルアップロード
-
-このタブでは以下の操作が可能です：
-
-- **音声ファイルのアップロード**: 「ファイルを選択」ボタンから音声ファイルを選択します。
-- **既存の音声ファイルの確認**: アップロード済みの音声ファイルの一覧と詳細を確認できます。
-- **ファイルの削除**: 「選択した音声ファイルを削除」ボタンで不要なファイルを削除できます。
-
-**使用上のヒント**:
-- 複数のファイルを同時に選択してアップロードできます
-- ファイルサイズが大きい場合はアップロードに時間がかかることがあります
-- 対応形式は MP3, WAV, M4A, MP4 などです
-
-#### 文字起こし結果
-
-文字起こしが完了したファイルはこのタブに表示されます：
-
-- **文字起こし一覧**: 処理済みファイルの一覧と詳細（作成日時、サイズなど）を確認できます。
-- **内容表示**: ファイルを選択すると内容がテキストエリアに表示されます。
-- **ダウンロード**: 「ファイルをダウンロード」ボタンで文字起こし結果をダウンロードできます。
-- **要約実行**: 「このファイルを要約する」ボタンで選択中のファイルの要約処理を開始します。
-
-**使用上のヒント**:
-- 文字起こし結果は自動的に保存されるので手動保存は不要です
-- 文字起こしの精度は音声の品質に大きく依存します
-- 長い音声ファイルの場合、処理に時間がかかることがあります
-
-#### 要約結果
-
-要約処理が完了したファイルはこのタブに表示されます：
-
-- **要約一覧**: 要約済みファイルの一覧と詳細を確認できます。
-- **要約内容と原文の比較**: 左側に要約テキスト、右側に元の文字起こしテキストが表示され、比較できます。
-- **ダウンロード**: 「要約ファイルをダウンロード」ボタンで要約結果をダウンロードできます。
-
-**使用上のヒント**:
-- 要約は文書の内容によって品質が異なります
-- 要約は原文の約30%の長さになるよう設定されています
-- 短いテキストは要約されずそのまま表示されます
-
-#### システム状態
-
-このタブではシステムの状態を確認できます：
-
-- **ディスク使用状況**: 音声ファイル、文字起こしファイル、要約ファイルの合計サイズを確認できます。
-- **プロセスステータス**: 各サービスの稼働状況を確認できます。
-- **最新の活動**: 最近処理されたファイルの履歴を確認できます。
-- **処理パイプライン**: システムの処理の流れが視覚的に表示されます。
-
-**使用上のヒント**:
-- 「自動更新」にチェックを入れると10秒ごとに自動更新されます
-- システムに問題がある場合はここで状態を確認できます
-
-### よくある質問
-
-#### Q: 音声ファイルのアップロード後、どのくらいで文字起こしが完了しますか？
-
-A: 音声ファイルの長さとシステムの負荷状況によって異なります。一般的な目安として、10分の音声で約1〜3分程度かかります。システム状態タブで処理の状況を確認できます。
-
-#### Q: 複数の言語に対応していますか？
-
-A: 基本的には日本語に最適化されていますが、英語など他の言語にも対応しています。ただし、文字起こしの精度は日本語が最も高くなるよう調整されています。
-
-#### Q: 文字起こしや要約の精度はどの程度ですか？
-
-A: 音声の品質や話者の明瞭さによって大きく変わります。クリアな音声であれば80%以上の精度が期待できます。要約は文書の構造や内容によって精度が変わります。
-
-#### Q: ファイルサイズの制限はありますか？
-
-A: 基本的には1ファイルあたり500MB程度までを推奨しています。それ以上の大きさのファイルは分割してアップロードすることをお勧めします。
-
-#### Q: 処理したファイルはどのくらいの期間保存されますか？
-
-A: システムの設定によって異なりますが、基本的には手動で削除するまで保存されます。定期的に不要なファイルを削除することをお勧めします。
-
-### トラブルシューティング
-
-#### 音声ファイルがアップロードできない
-
-- **確認事項**: ファイル形式が対応しているか確認（MP3, WAV, M4A, MP4, MPEG, MPGA, WEBM）
-- **対処法**: 対応形式に変換してから再度アップロードしてください
-- **補足**: ファイルサイズが大きすぎる場合は分割することを検討してください
-
-#### 文字起こし結果が表示されない
-
-- **確認事項**: 処理状況をシステム状態タブで確認
-- **対処法**: 処理に時間がかかっている場合は、しばらく待ってから再確認してください
-- **補足**: システムの負荷が高い場合は処理に時間がかかることがあります
-
-#### 要約結果の精度が低い
-
-- **確認事項**: 元の文字起こしの品質と長さ
-- **対処法**: 文字起こし自体の品質が低い場合は、より良い音声で再試行してください
-- **補足**: 短すぎるテキストや構造が不明確なテキストは要約の品質が下がる傾向があります
-
-#### システムにアクセスできない
-
-- **確認事項**: 正しいURLにアクセスしているか確認（通常は http://localhost:8501）
-- **対処法**: ブラウザの再起動や別のブラウザでの接続を試してください
-- **補足**: システムが停止している場合はシステム管理者に連絡してください
-
-## 技術情報
-
-### 使用技術
-
-- **音声認識**: OpenAI Whisper
-- **テキスト要約**: 統計的テキスト要約（単語頻度と文の位置に基づく要約）
-- **Web UI**: Streamlit
-- **コンテナ化**: Docker & Docker Compose
-
-### システム構成
-
-```
-whisper-summarize-system/
-├── docker-compose.yml              # Docker Compose設定
-├── whisper/                        # Whisper文字起こしサービス
-│   ├── Dockerfile                  
-│   └── auto_transcribe.py          # 文字起こしスクリプト
-├── summarizer/                     # テキスト要約サービス
-│   ├── Dockerfile                  
-│   └── summarize.py                # 要約スクリプト
-├── webui/                          # Web UIサービス
-│   ├── Dockerfile                  
-│   └── app.py                      # Streamlitアプリケーション
-├── audio_files/                    # 音声ファイル保存ディレクトリ
-├── output_files/                   # 文字起こし結果保存ディレクトリ
-└── summary_files/                  # 要約結果保存ディレクトリ
-```
-
-### 環境変数のカスタマイズ
-
-`docker-compose.yml` の `environment` セクションで以下の環境変数を設定できます：
-
-#### Whisperサービス
-- `MODEL_SIZE`: Whisperモデルのサイズ（`tiny`, `base`, `small`, `medium`, `large-v1`, `large-v2`）
-- `LANGUAGE`: 文字起こし言語（`ja`, `en`, `auto`など）
-- `INTERVAL`: 監視間隔（秒）
-- `OUTPUT_FORMAT`: 出力形式（`txt`, `srt`, `vtt`, `json`, `all`）
-- `DEVICE`: デバイス指定（`cuda`, `cpu`）
-
-#### 要約サービス
-- `INTERVAL`: 監視間隔（秒）
-- `MAX_LENGTH`: 要約の最大長（文字数）
-- `MIN_LENGTH`: 要約の最小長（文字数）
-- `SUMMARY_RATIO`: 要約率（元のテキストに対する比率）
-- `TRIGGER_EXTENSION`: 監視対象のファイル拡張子
-
-## 注意事項
-
-- CPU環境では大きなモデルの処理に時間がかかる場合があります
-- 定期的にファイルの整理を行い、不要なファイルを削除することをお勧めします
-- 対応している音声形式: MP3, WAV, M4A, MP4, MPEG, MPGA, WEBM
-
----
-
-本システムは OpenAI の Whisper モデルを使用した音声認識と、統計的手法を用いたテキスト要約を組み合わせたものです。ご質問やサポートが必要な場合は、システム管理者にお問い合わせください。
+- 初回起動時には、Whisperモデルのダウンロードが行われるため、数分かかることがあります。
+- PCのスペックに応じて、モデルサイズを調整することをお勧めします：
+    - 低スペックマシン：tiny または base
+    - 標準的なマシン：medium（デフォルト）
+    - 高スペックマシン：large

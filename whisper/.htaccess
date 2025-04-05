@@ -1,0 +1,30 @@
+# APIアクセス用ルール
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # APIルート（/api）へのリクエストをapi.phpにルーティング
+    RewriteRule ^api$ api.php [QSA,L]
+
+    # ヘルスチェック（/health）をapi.php?healthにルーティング
+    RewriteRule ^health$ api.php?health [QSA,L]
+</IfModule>
+
+# パフォーマンスとセキュリティの設定
+<IfModule mod_headers.c>
+    # CORS設定（必要に応じて）
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type"
+
+    # キャッシュ無効化（APIレスポンス用）
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+</IfModule>
+
+# PHPの実行時間制限（大きな音声ファイル処理用）
+<IfModule mod_php.c>
+    php_value max_execution_time 300
+    php_value upload_max_filesize 500M
+    php_value post_max_size 500M
+    php_value memory_limit 512M
+</IfModule>
