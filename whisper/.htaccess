@@ -5,6 +5,9 @@
     # APIルート（/api）へのリクエストをapi.phpにルーティング
     RewriteRule ^api$ api.php [QSA,L]
 
+    # サマリールート（/api/summarize）へのリクエストをapi.php?summarizeにルーティング
+    RewriteRule ^api/summarize$ api.php?summarize [QSA,L]
+
     # ヘルスチェック（/health）をapi.php?healthにルーティング
     RewriteRule ^health$ api.php?health [QSA,L]
 </IfModule>
@@ -23,8 +26,8 @@
 
 # PHPの実行時間制限（大きな音声ファイル処理用）
 <IfModule mod_php.c>
-    php_value max_execution_time 300
+    php_value max_execution_time 900
     php_value upload_max_filesize 500M
     php_value post_max_size 500M
-    php_value memory_limit 512M
+    php_value memory_limit 2G
 </IfModule>

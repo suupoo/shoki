@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # PHPの拡張機能をインストール
@@ -33,9 +34,18 @@ RUN docker-php-ext-install \
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# OpenAI Whisperのインストール（公式パッケージ）
+# 依存関係のバージョンを固定してインストール
 RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir openai-whisper
+    pip3 install --no-cache-dir \
+    numpy==1.24.3 \
+    torch==2.0.1 --extra-index-url https://download.pytorch.org/whl/cpu \
+    transformers==4.31.0 \
+    sentencepiece \
+    protobuf==3.20.3 \
+    sacremoses
+
+# OpenAI Whisperをインストール
+RUN pip3 install --no-cache-dir openai-whisper
 
 # Apacheの設定を更新
 RUN a2enmod rewrite
@@ -49,20 +59,24 @@ COPY php.ini /usr/local/etc/php/conf.d/custom.ini
 # アップロードサイズの上限を設定
 RUN echo "upload_max_filesize = 500M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "post_max_size = 500M" >> /usr/local/etc/php/conf.d/uploads.ini \
-    && echo "memory_limit = 512M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "memory_limit = 2G" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_execution_time = 900" >> /usr/local/etc/php/conf.d/uploads.ini
 
 # タイムゾーンの設定
 RUN echo "date.timezone = Asia/Tokyo" >> /usr/local/etc/php/conf.d/timezone.ini
 
 # ディレクトリの作成
-RUN mkdir -p /models /data /data/uploads /data/processed /data/exports /data/logs /data/config /data/cache
+RUN mkdir -p /models /data /data/uploads /data/processed /data/exports /data/logs /data/config /data/cache /data/archives
+
+# scriptsディレクトリの作成
+RUN mkdir -p /var/www/html/scripts
 
 # キャッシュディレクトリの作成と権限設定（Permission denied問題を解決）
 ENV XDG_CACHE_HOME=/data/cache
 
 # PHPファイルをコピー
-COPY index.php api.php /var/www/html/
+COPY index.php api.php .htaccess /var/www/html/
+COPY scripts/ /var/www/html/scripts/
 
 # ディレクトリの権限を設定（修正: www-dataユーザーに十分な権限を付与）
 RUN chown -R www-data:www-data /var/www/html /data /models && \
@@ -72,6 +86,7 @@ RUN chown -R www-data:www-data /var/www/html /data /models && \
 ENV MODEL_SIZE=medium
 ENV LANGUAGE=ja
 ENV PYTHONPATH=/opt/venv/lib/python3.*/site-packages
+ENV TRANSFORMERS_CACHE=/data/cache/transformers
 
 # ポートの公開
 EXPOSE 80

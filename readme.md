@@ -1,216 +1,163 @@
-# 議事録自動生成システム - セットアップ手順（最終版）
+# メモ助：議事録自動生成システム
 
-以下の簡単な手順で議事録自動生成システムをセットアップできます。test.phpの内容をindex.phpに統合し、より簡潔なURLでアクセスできるようになりました。
+AI技術を活用して音声を文字起こし・要約する「メモ助」システムです。会議や講義の録音から簡単に議事録を生成できます。
 
-## 1. ファイル構造の作成
+## 主な機能
+
+- **音声文字起こし**: OpenAI Whisperを使用した高精度な音声認識
+- **要約機能**: rinna/japanese-gpt-neox-3.6b-instruction-ppoモデルによる文字起こしテキストの自動要約
+- **話者ラベル**: 会議の参加者ごとにセリフを分類
+- **結果エクスポート**: テキスト、Markdown、CSVなど様々な形式での保存
+
+## 1. 必要な環境
+
+- Docker および Docker Compose
+- 8GB以上のRAM（要約機能使用時）
+- インターネット接続（初回のモデルダウンロード用）
+
+## 2. ファイル構造
 
 以下のファイル構造を作成します：
 
 ```
-議事録自動生成システム/
-├── docker-compose.yml
-├── .env
+メモ助/
+├── compose.yaml       # Docker Compose設定
+├── .env               # 環境変数設定
 └── whisper/
-    ├── Dockerfile
-    ├── php.ini
-    ├── index.php
-    └── api.php
+    ├── Dockerfile     # Dockerイメージ定義
+    ├── .htaccess      # Apache設定
+    ├── php.ini        # PHP設定
+    ├── index.php      # Webインターフェース
+    ├── api.php        # APIエンドポイント
+    └── scripts/       # Pythonスクリプト
+        └── summarize.py # 要約処理スクリプト
 ```
 
-## 2. 各ファイルを以下の内容で作成します：
+## 3. セットアップ手順
 
-### docker-compose.yml
+1. リポジトリをクローンまたはファイルをダウンロード
 
-```yaml
-version: '3'
-
-services:
-  whisper:
-    build:
-      context: ./whisper
-      dockerfile: Dockerfile
-    volumes:
-      - ./data:/data
-      - ./models:/models
-    ports:
-      - "${PORT:-9999}:80"
-    environment:
-      - MODEL_SIZE=${MODEL_SIZE:-medium}
-      - LANGUAGE=${LANGUAGE:-ja}
-    restart: unless-stopped
-    # 初期化スクリプトを実行
-    entrypoint: >
-      bash -c "
-        mkdir -p /data/uploads /data/processed /data/exports /data/logs /data/config /data/cache &&
-        chown -R www-data:www-data /data /models &&
-        chmod -R 775 /data /models &&
-        apache2-foreground
-      "
-
-volumes:
-  models:
+```bash
+git clone https://github.com/yourusername/memo-assistant.git
+cd memo-assistant
 ```
 
-### .env
+2. 環境設定（必要に応じて）
+
+`.env`ファイルを編集して設定をカスタマイズできます：
 
 ```
 # ポート設定
 PORT=9999
 
 # 音声認識設定
-MODEL_SIZE=medium
-LANGUAGE=ja
+MODEL_SIZE=medium  # tiny, base, small, medium, large から選択
+LANGUAGE=ja        # 主に使用する言語コード
+
+# 要約機能設定
+SUMMARIZE_ENABLED=true
 ```
 
-### whisper/Dockerfile
-
-```dockerfile
-FROM php:8.3-apache
-
-WORKDIR /var/www/html
-
-# システムの依存関係をインストール
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    build-essential \
-    python3 \
-    python3-pip \
-    python3-dev \
-    python3-venv \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libzip-dev \
-    zip \
-    unzip \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# PHPの拡張機能をインストール
-RUN docker-php-ext-install \
-    mysqli \
-    zip \
-    gd \
-    mbstring \
-    exif \
-    pcntl \
-    bcmath
-
-# Python仮想環境を作成（外部管理環境の問題を回避）
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# OpenAI Whisperのインストール（公式パッケージ）
-RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir openai-whisper
-
-# Apacheの設定を更新
-RUN a2enmod rewrite
-
-# PHP設定をカスタマイズ
-RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
-
-# PHPカスタム設定ファイルをコピー
-COPY php.ini /usr/local/etc/php/conf.d/custom.ini
-
-# アップロードサイズの上限を設定
-RUN echo "upload_max_filesize = 500M" > /usr/local/etc/php/conf.d/uploads.ini \
-    && echo "post_max_size = 500M" >> /usr/local/etc/php/conf.d/uploads.ini \
-    && echo "memory_limit = 512M" >> /usr/local/etc/php/conf.d/uploads.ini \
-    && echo "max_execution_time = 900" >> /usr/local/etc/php/conf.d/uploads.ini
-
-# タイムゾーンの設定
-RUN echo "date.timezone = Asia/Tokyo" >> /usr/local/etc/php/conf.d/timezone.ini
-
-# ディレクトリの作成
-RUN mkdir -p /models /data /data/uploads /data/processed /data/exports /data/logs /data/config /data/cache
-
-# キャッシュディレクトリの作成と権限設定（Permission denied問題を解決）
-ENV XDG_CACHE_HOME=/data/cache
-
-# PHPファイルをコピー
-COPY index.php api.php /var/www/html/
-
-# ディレクトリの権限を設定（修正: www-dataユーザーに十分な権限を付与）
-RUN chown -R www-data:www-data /var/www/html /data /models && \
-    chmod -R 775 /data /models
-
-# 環境変数の設定
-ENV MODEL_SIZE=medium
-ENV LANGUAGE=ja
-ENV PYTHONPATH=/opt/venv/lib/python3.*/site-packages
-
-# ポートの公開
-EXPOSE 80
-
-# Apacheの起動
-CMD ["apache2-foreground"]
-```
-
-### whisper/php.ini
-
-```ini
-[PHP]
-; 最大実行時間を拡大（音声処理のため）
-max_execution_time = 300
-max_input_time = 300
-
-; エラー表示設定
-display_errors = Off
-display_startup_errors = Off
-log_errors = On
-error_log = /data/logs/php_errors.log
-
-; 日本語関連設定
-default_charset = "UTF-8"
-mbstring.language = Japanese
-mbstring.internal_encoding = UTF-8
-
-; セキュリティ設定
-expose_php = Off
-allow_url_fopen = On
-allow_url_include = Off
-
-; アップロード設定
-file_uploads = On
-upload_max_filesize = 500M
-post_max_size = 500M
-max_file_uploads = 20
-
-; メモリ設定
-memory_limit = 512M
-```
-
-### whisper/index.php および whisper/api.php
-
-前述のコードを使用してファイルを作成してください。
-- index.php: メインのフォーム画面を含むHTMLコード
-- api.php: 音声認識処理を行うPHPコード
-
-## 3. セットアップの実行
-
-セットアップはとても簡単です：
+3. Dockerコンテナのビルドと起動
 
 ```bash
 docker-compose up -d
 ```
 
-これだけ！必要なディレクトリはすべて自動的に作成され、サービスが起動します。
+4. 初回起動時の注意点
+
+- 初回起動時には、Whisperモデルと要約モデルがダウンロードされるため、数分〜数十分かかることがあります
+- ダウンロードの進行状況はログで確認できます：`docker-compose logs -f`
 
 ## 4. 使用方法
 
-ブラウザで以下のURLにアクセスします：
+1. ブラウザでアクセス：`http://localhost:9999`
+2. 音声ファイルをアップロードし、必要に応じてオプションを設定
+3. 「処理を開始」ボタンをクリックして文字起こし／要約を実行
+4. 処理完了後、結果を確認・ダウンロード
 
+## 5. システム仕様
+
+### 対応音声フォーマット
+- MP3, WAV, M4A, OGG
+- 最大ファイルサイズ: 500MB
+
+### モデルサイズと性能
+- tiny: 最も軽量、低精度（低スペックPCに最適）
+- base: 軽量、やや低精度
+- small: 中程度のサイズと精度
+- medium: バランスの取れた精度と処理速度（推奨）
+- large: 最高精度、高負荷
+
+### メモリ要件
+- 文字起こしのみ: 2GB以上のRAM
+- 要約機能使用時: 8GB以上のRAM推奨
+
+## 6. トラブルシューティング
+
+### 一般的な問題
+
+- **エラー「メモリ不足」**: モデルサイズを小さくするか、要約機能を無効化
+- **処理が遅い**: より小さいモデルサイズを選択
+- **特定の言語での精度が低い**: 適切な言語コードを指定
+- **NumPyエラー**: Dockerfileの依存関係バージョンを確認・修正
+
+### ログの確認
+
+```bash
+docker-compose logs -f
 ```
-http://localhost:9999
+
+### キャッシュのクリア
+
+```bash
+docker-compose down
+rm -rf ./data/cache/*
+docker-compose up -d
 ```
 
-フォームから音声ファイルをアップロードし、「文字起こしを実行」ボタンをクリックすれば処理が始まります。
+## ライセンスとメンテナンス状況
 
-## 5. 注意点
+### ライセンス情報
 
-- 初回起動時には、Whisperモデルのダウンロードが行われるため、数分かかることがあります。
-- PCのスペックに応じて、モデルサイズを調整することをお勧めします：
-    - 低スペックマシン：tiny または base
-    - 標準的なマシン：medium（デフォルト）
-    - 高スペックマシン：large
+このプロジェクト「メモ助：議事録自動生成システム」は**MITライセンス**の下で公開されています。ただし、以下の重要な例外があります：
+
+本プロジェクトは以下の外部ライブラリおよびモデルに依存しており、それぞれ独自のライセンスが適用されます：
+
+- **OpenAI Whisper**: MITライセンス
+- **rinna/japanese-gpt-neox-3.6b-instruction-ppo**: [CC BY-SA 4.0ライセンス](https://creativecommons.org/licenses/by-sa/4.0/)
+
+特に注意すべき点として、**rinna/japanese-gpt-neox-3.6b-instruction-ppoモデル**はCC BY-SA 4.0ライセンスの条件に従います：
+1. **表示 (Attribution)**: rinnaのモデルを使用していることを明記する必要があります
+2. **継承 (ShareAlike)**: このモデルを含むソフトウェアを改変して配布する場合、同じCC BY-SA 4.0ライセンスで公開する必要があります
+
+これは、このプロジェクトの要約機能を利用・改変する場合、その部分についてはCC BY-SA 4.0ライセンスに従う必要があることを意味します。
+
+### メンテナンス状況
+
+**重要**: 本プロジェクトは現在、アクティブにメンテナンスされていません。
+
+- バグ修正や機能追加の予定はありません
+- セキュリティアップデートは提供されない可能性があります
+- 依存ライブラリの非互換性によって将来的に動作しなくなる可能性があります
+
+このプロジェクトは「現状のまま」提供され、いかなる保証もありません。本番環境での使用は自己責任で行ってください。
+
+### コントリビューション
+
+このプロジェクトはアクティブにメンテナンスされていませんが、フォークして独自のバージョンを開発することを歓迎します。ただし、上記のライセンス条件に注意してください：
+
+- プロジェクト全体はMITライセンスですが、要約機能（rinnaモデル使用部分）についてはCC BY-SA 4.0の条件が適用されます
+- 要約機能を含めてフォークする場合、その部分についてはCC BY-SA 4.0ライセンスで公開する必要があります
+
+コントリビューションを検討される場合は、本リポジトリへのプルリクエストではなく、プロジェクトをフォークして独自に開発することをお勧めします。
+
+## 謝辞
+
+このプロジェクトは以下のオープンソースプロジェクトに支えられています：
+
+- [OpenAI Whisper](https://github.com/openai/whisper)
+- [rinna/japanese-gpt-neox-3.6b-instruction-ppo](https://huggingface.co/rinna/japanese-gpt-neox-3.6b-instruction-ppo)
+- [Tailwind CSS](https://tailwindcss.com/)
+
+各プロジェクトの開発者の皆様に感謝いたします。
