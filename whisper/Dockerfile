@@ -42,7 +42,8 @@ RUN pip3 install --upgrade pip && \
     transformers==4.31.0 \
     sentencepiece \
     protobuf==3.20.3 \
-    sacremoses
+    sacremoses \
+    requests==2.31.0
 
 # OpenAI Whisperをインストール
 RUN pip3 install --no-cache-dir openai-whisper
@@ -82,14 +83,31 @@ COPY scripts/ /var/www/html/scripts/
 RUN chown -R www-data:www-data /var/www/html /data /models && \
     chmod -R 775 /data /models
 
+# Ollama API設定
+ENV USE_OLLAMA="true"
+ENV OLLAMA_API_URL="http://host.docker.internal:11434/api/generate"
+ENV OLLAMA_MODEL="llama3"
+
 # 環境変数の設定
 ENV MODEL_SIZE=medium
 ENV LANGUAGE=ja
 ENV PYTHONPATH=/opt/venv/lib/python3.*/site-packages
 ENV TRANSFORMERS_CACHE=/data/cache/transformers
 
+# Dockerホスト名解決のためのhostsファイル追記スクリプト（Mac/Windows対応）
+RUN echo '#!/bin/bash\n\
+# Dockerホストの解決を追加\n\
+HOST_DOMAIN="host.docker.internal"\n\
+if ! grep -q $HOST_DOMAIN /etc/hosts; then\n\
+  echo -e "$(ip route | awk '"'"'/default/ { print $3 }'"'"')\t$HOST_DOMAIN" >> /etc/hosts\n\
+fi\n\
+\n\
+# Apacheを起動\n\
+apache2-foreground\n' > /usr/local/bin/docker-entrypoint.sh && \
+chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # ポートの公開
 EXPOSE 80
 
-# Apacheの起動
-CMD ["apache2-foreground"]
+# エントリーポイントの設定
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

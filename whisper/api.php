@@ -358,9 +358,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $summarizeScript = $scriptsDir . '/summarize.py';
-        if (!file_exists($summarizeScript)) {
-          file_put_contents($summarizeScript, createSummarizeScript());
-          chmod($summarizeScript, 0755);
+        $summaryScriptInfo = getPreferredSummarizeScript();
+        $summarizeScript = $summaryScriptInfo['script'];
+
+      // Ollama API用にコマンド調整
+        if ($summaryScriptInfo['type'] === 'ollama') {
+          $ollamaApiUrl = getenv('OLLAMA_API_URL') ?: 'http://host.docker.internal:11434/api/generate';
+          $ollamaModel = getenv('OLLAMA_MODEL') ?: 'llama3';
+          $summarizeCommand = "{$pythonPath} {$summarizeScript} " .
+              escapeshellarg($outputJson) . " " .
+              escapeshellarg($summaryOutputJson) . " " .
+              "--api_url " . escapeshellarg($ollamaApiUrl) . " " .
+              "--model " . escapeshellarg($ollamaModel);
+        } else {
+          // 通常の要約コマンド（既存コード）
+          $summarizeCommand = "{$pythonPath} {$summarizeScript} " .
+              escapeshellarg($outputJson) . " " .
+              escapeshellarg($summaryOutputJson);
         }
 
         // 要約スクリプトの実行
@@ -787,4 +801,36 @@ def main():
 if __name__ == "__main__":
     main()
 PYTHON;
+}
+
+/**
+ * 要約スクリプトの選択（LM StudioかTransformersか）
+ */
+function getPreferredSummarizeScript() {
+  // 環境変数でOllamaの使用が有効になっているか確認
+  $useOllama = strtolower(getenv('USE_OLLAMA') ?: 'false');
+
+  if ($useOllama === 'true') {
+    // Ollama APIスクリプトのパスを確認
+    $scriptPath = __DIR__ . '/scripts/ollama_summarize.py';
+
+    if (file_exists($scriptPath)) {
+      logMessage("Ollama APIによる要約を使用します");
+      return ['script' => $scriptPath, 'type' => 'ollama'];
+    } else {
+      logMessage("Ollama APIスクリプトが見つかりません。標準の要約に切り替えます");
+    }
+  }
+
+  // 標準のTransformersスクリプト
+  $standardScript = __DIR__ . '/scripts/summarize.py';
+
+  // スクリプトが存在しない場合はデフォルトスクリプトを作成
+  if (!file_exists($standardScript)) {
+    file_put_contents($standardScript, createSummarizeScript());
+    chmod($standardScript, 0755);
+  }
+
+  logMessage("標準のTransformersによる要約を使用します");
+  return ['script' => $standardScript, 'type' => 'transformers'];
 }
