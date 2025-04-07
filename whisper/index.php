@@ -267,15 +267,11 @@
         const resultContents = document.querySelectorAll('.result-content');
         const transcriptionText = document.getElementById('transcriptionText');
         const transcriptionInfo = document.getElementById('transcriptionInfo');
-        const summaryContent = document.getElementById('summaryContent');
-        const summaryNotAvailable = document.getElementById('summaryNotAvailable');
         const segmentsTableBody = document.getElementById('segmentsTableBody');
 
         // コピー・ダウンロードボタン
         const copyTranscription = document.getElementById('copyTranscription');
         const downloadTranscription = document.getElementById('downloadTranscription');
-        const copySummary = document.getElementById('copySummary');
-        const downloadSummary = document.getElementById('downloadSummary');
         const exportSegments = document.getElementById('exportSegments');
         const downloadAllBtn = document.getElementById('downloadAllBtn');
 
@@ -463,7 +459,7 @@
                 });
         });
 
-        // 結果の表示
+        // 結果の表示関数
         function displayResults(data) {
             // 文字起こし結果
             if (data.text) {
@@ -471,23 +467,8 @@
                 transcriptionInfo.textContent = `処理時間: ${data.processing_time}秒 | 言語: ${data.language || 'ja'}`;
             }
 
-            // 要約結果
-            if (data.summary) {
-                summaryContent.innerHTML = formatMarkdown(data.summary);
-                summaryContent.classList.remove('hidden');
-                summaryNotAvailable.classList.add('hidden');
-            } else {
-                summaryContent.classList.add('hidden');
-                summaryNotAvailable.classList.remove('hidden');
-            }
-
-            // Markdownファイルがある場合
-            if (data.markdown_file) {
-                const downloadSummaryBtn = document.getElementById('downloadSummary');
-                downloadSummaryBtn.setAttribute('data-file', data.markdown_file);
-            }
-
             // セグメント情報
+            console.log(data);
             if (data.segments && data.segments.length > 0) {
                 // 話者ラベルの取得
                 const speakerLabels = data.speaker_labels || [];
@@ -518,6 +499,9 @@
 
                     segmentsTableBody.appendChild(row);
                 });
+            } else {
+                // セグメントデータがない場合の処理
+                segmentsTableBody.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-gray-500">セグメント情報がありません</td></tr>';
             }
         }
 
@@ -550,28 +534,10 @@
             showToast('文字起こし結果をコピーしました');
         });
 
-        copySummary.addEventListener('click', () => {
-            const textToCopy = summaryContent.innerText;
-            const textarea = document.createElement('textarea');
-            textarea.value = textToCopy;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            showToast('要約をコピーしました');
-        });
-
         // ダウンロードボタンの処理
         downloadTranscription.addEventListener('click', () => {
             if (currentResults && currentResults.text) {
                 downloadText(currentResults.text, 'transcription.txt');
-            }
-        });
-
-        downloadSummary.addEventListener('click', () => {
-            if (currentResults && currentResults.summary) {
-                const markdownContent = currentResults.markdown || currentResults.summary;
-                downloadText(markdownContent, 'summary.md');
             }
         });
 

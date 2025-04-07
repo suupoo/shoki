@@ -343,10 +343,22 @@ result = model.transcribe(
     verbose=False
 )
 
+# セグメント情報をJSONシリアライズ可能な形式に変換
+formatted_segments = []
+for segment in result["segments"]:
+    formatted_segment = {
+        "id": int(segment.get("id", 0)),
+        "start": float(segment["start"]),
+        "end": float(segment["end"]),
+        "text": segment["text"]
+    }
+    # 必要に応じて他のフィールドも追加
+    formatted_segments.append(formatted_segment)
+
 # 必要な情報のみ抽出
 output = {
     "text": result["text"],
-    "segments": result["segments"],
+    "segments": formatted_segments,
     "language": result.get("language", "{$language}")
 }
 
