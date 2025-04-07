@@ -128,19 +128,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $timestamp = date('YmdHis');
     $sessionId = uniqid('session_');
 
-    // 一時ディレクトリの作成
-    $tmpDir = '/tmp/whisper_' . uniqid();
-    if (!file_exists($tmpDir)) {
-      mkdir($tmpDir, 0755, true);
+    // データディレクトリ内に作業用ディレクトリを作成
+    $workDir = $dataDir . '/scripts/' . $sessionId;
+    if (!file_exists($workDir)) {
+      $mkdirResult = mkdir($workDir, 0777, true);
+      if (!$mkdirResult) {
+        logMessage("エラー: 作業ディレクトリの作成に失敗しました: {$workDir}");
+        throw new Exception("作業ディレクトリの作成に失敗しました");
+      }
+      logMessage("作業ディレクトリを作成しました: {$workDir}");
     }
 
-    // 処理に必要なスクリプトを作成
-    $pythonScript = $tmpDir . '/transcribe.py';
-    file_put_contents($pythonScript, createPythonScript($modelSize, $language));
-    chmod($pythonScript, 0755);
+    // 作業ディレクトリの権限を設定
+    chmod($workDir, 0777);
+
+    // Pythonスクリプトを作成
+    $pythonScript = $workDir . '/transcribe.py';
+    $scriptContent = createPythonScript($modelSize, $language);
+
+    // スクリプトを書き込み
+    $bytesWritten = file_put_contents($pythonScript, $scriptContent);
+    if ($bytesWritten === false) {
+      logMessage("エラー: スクリプトファイルの書き込みに失敗しました");
+      throw new Exception("スクリプトファイルの書き込みに失敗しました");
+    }
+    logMessage("スクリプトファイルを作成しました: {$pythonScript} ({$bytesWritten} バイト)");
+
+    // 実行権限を付与
+    chmod($pythonScript, 0777);
 
     // 出力JSONファイルのパス
-    $outputJson = $tmpDir . '/output.json';
+    $outputJson = $workDir . '/output.json';
 
     // Pythonスクリプトの実行（仮想環境を使用）
     logMessage("音声ファイル {$originalName} の文字起こしを開始します");
