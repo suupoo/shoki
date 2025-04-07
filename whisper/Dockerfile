@@ -77,7 +77,6 @@ ENV XDG_CACHE_HOME=/data/cache
 
 # PHPファイルをコピー
 COPY index.php api.php .htaccess /var/www/html/
-COPY scripts/ /var/www/html/scripts/
 
 # ディレクトリの権限を設定（修正: www-dataユーザーに十分な権限を付与）
 RUN chown -R www-data:www-data /var/www/html /data /models && \

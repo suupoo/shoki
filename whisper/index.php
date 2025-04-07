@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>メモ助 - 議事録自動生成システム</title>
+  <title>SHOKI - 音声文字起こしシステム</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -31,8 +31,8 @@
         <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-.5a1.5 1.5 0 000 3h.5a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-.5a1.5 1.5 0 00-3 0v.5a1 1 0 01-1 1H6a1 1 0 01-1-1v-3a1 1 0 00-1-1h-.5a1.5 1.5 0 010-3H4a1 1 0 001-1V6a1 1 0 011-1h3a1 1 0 001-1v-.5z"></path>
       </svg>
     </div>
-    <h1 class="text-4xl font-bold text-gray-800">メモ<span class="text-indigo-600">助</span></h1>
-    <p class="text-gray-600 mt-2">AIが議事録を自動生成・要約します</p>
+    <h1 class="text-4xl font-bold text-gray-800"><span class="text-indigo-600">SHOKI</span></h1>
+    <p class="text-gray-600 mt-2">AIが音声を文字起こしします</p>
   </header>
 
   <!-- メインコンテンツ -->
@@ -72,9 +72,9 @@
                       class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                 <option value="tiny">tiny（軽量・低精度）</option>
                 <option value="base">base（やや軽量・やや低精度）</option>
-                <option value="small">small（中程度）</option>
-                <option value="medium" selected>medium（標準）</option>
-                <option value="large">large（高精度・高負荷）</option>
+                <option value="small" selected>small（中程度）</option>
+                <option value="medium">medium（標準）</option>
+<!--                <option value="large">large（高精度・高負荷）</option>-->
               </select>
             </div>
 
@@ -91,14 +91,6 @@
                 <option value="es">スペイン語</option>
               </select>
             </div>
-          </div>
-
-          <!-- 要約オプション -->
-          <div class="flex items-center">
-            <input type="checkbox" id="summarize" name="options[summarize]" value="1" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-            <label for="summarize" class="ml-2 block text-sm text-gray-700">
-              自動要約機能を有効にする（AI要約を生成）
-            </label>
           </div>
 
           <!-- 話者ラベル機能 -->
@@ -164,9 +156,6 @@
           <button type="button" data-tab="transcription" class="result-tab border-indigo-500 text-indigo-600 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm">
             文字起こし
           </button>
-          <button type="button" data-tab="summary" class="result-tab border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm">
-            要約
-          </button>
           <button type="button" data-tab="segments" class="result-tab border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm">
             セグメント
           </button>
@@ -198,37 +187,6 @@
             <textarea id="transcriptionText" class="w-full h-64 p-3 border border-gray-300 rounded font-mono text-sm" readonly></textarea>
             <div class="mt-4 text-sm text-gray-500">
               <span id="transcriptionInfo"></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 要約結果 -->
-        <div id="summaryTab" class="result-content hidden">
-          <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex justify-between items-center mb-4">
-              <h2 class="text-lg font-medium text-gray-900">議事録要約</h2>
-              <div class="flex space-x-2">
-                <button id="copySummary" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm flex items-center">
-                  <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                  </svg>
-                  コピー
-                </button>
-                <button id="downloadSummary" class="px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded text-sm flex items-center">
-                  <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                  </svg>
-                  ダウンロード
-                </button>
-              </div>
-            </div>
-            <div id="summaryContent" class="prose max-w-none p-3 border border-gray-300 rounded bg-gray-50 min-h-[200px]"></div>
-            <div id="summaryNotAvailable" class="hidden text-center py-12">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <h3 class="mt-2 text-sm font-medium text-gray-900">要約は利用できません</h3>
-              <p class="mt-1 text-sm text-gray-500">文字起こし時に「自動要約機能」を有効にしてください。</p>
             </div>
           </div>
         </div>
@@ -281,8 +239,8 @@
 
     <!-- フッター情報 -->
     <div class="mt-12 pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
-      <p>© 2025 メモ助 - 議事録自動生成システム</p>
-      <p class="mt-1">OpenAI Whisper および rinna/japanese-gpt-neox-3.6bモデルを使用しています</p>
+      <p>© 2025 SHOKI - 音声文字起こしシステム</p>
+      <p class="mt-1">OpenAI Whisperモデルを使用しています</p>
     </div>
   </div>
 </div>

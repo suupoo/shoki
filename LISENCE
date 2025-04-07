@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 メモ助：議事録自動生成システム
+Copyright (c) 2025 SHOKI：音声文字起こしシステム
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,9 +29,6 @@ license terms. The components and their respective licenses are:
 
 1. OpenAI Whisper - MIT License
    https://github.com/openai/whisper/blob/main/LICENSE
-
-2. rinna/japanese-gpt-neox-3.6b-instruction-ppo - Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)
-   https://creativecommons.org/licenses/by-sa/4.0/
 
 When using or redistributing this project, you must comply with all applicable
 third-party licenses.
