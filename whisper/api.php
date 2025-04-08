@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['summarize'])) {
     $text = $requestData['text'];
     $language = $requestData['language'] ?? (getenv('LANGUAGE') ?: 'ja');
     $correctText = isset($requestData['correct']) ? (bool)$requestData['correct'] : true;
+    $format = $requestData['format'] ?? 'standard';
 
     // Gemini APIキーの取得
     $apiKey = getenv('GEMINI_API_KEY');
@@ -71,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['summarize'])) {
 
     if ($correctText) {
       // 文章の補正と要約を実行
-      $result = correctAndSummarizeText($text, $language, $apiKey, $model);
+      $result = correctAndSummarizeText($text, $language, $apiKey, $model, $format);
 
       if ($result['success']) {
         echo json_encode([

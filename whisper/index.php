@@ -266,6 +266,19 @@
               </label>
               <p class="text-xs text-gray-500 mt-1">オンにすると、文字起こし結果を自然な文章に補正した上で要約します。より正確な結果が得られますが、処理時間が長くなります。</p>
 
+              <!-- フォーマット選択ドロップダウン -->
+              <div class="mt-3">
+                <label for="summaryFormat" class="block text-xs font-medium text-gray-700">要約フォーマット</label>
+                <select id="summaryFormat" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="meeting">会議議事録</option>
+                  <option value="standard">標準 (段落形式)</option>
+                  <option value="bullet">箇条書き</option>
+                  <option value="headline">見出し形式</option>
+                  <option value="qa">Q&A形式</option>
+                  <option value="executive">エグゼクティブサマリー</option>
+                </select>
+              </div>
+
               <!-- モデル選択ドロップダウン -->
               <div class="mt-3">
                 <label for="geminiModel" class="block text-xs font-medium text-gray-700">Geminiモデル</label>
@@ -546,7 +559,7 @@
                     } else if (progress < 50) {
                         processingMessage.textContent = 'Whisperモデルで文字起こし処理中...';
                     } else if (progress < 80) {
-                        if (document.getElementById('summarize').checked) {
+                        if (document.getElementById('enableCorrection') && document.getElementById('enableCorrection').checked) {
                             processingMessage.textContent = '文字起こし完了、要約を生成中...';
                         } else {
                             processingMessage.textContent = '文字起こし処理をまとめています...';
@@ -727,6 +740,9 @@
                 // 補正フラグの取得
                 const correctText = enableCorrection.checked;
 
+                // フォーマット選択の取得
+                const selectedFormat = document.getElementById('summaryFormat').value;
+
                 // モデル選択を取得
                 const selectedModel = geminiModel ? geminiModel.value : null;
 
@@ -740,7 +756,8 @@
                         text: currentResults.text,
                         language: currentResults.language || 'ja',
                         correct: correctText,
-                        model: selectedModel
+                        model: selectedModel,
+                        format: selectedFormat
                     })
                 });
 
