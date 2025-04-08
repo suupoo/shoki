@@ -76,7 +76,7 @@ RUN mkdir -p /var/www/html/scripts
 ENV XDG_CACHE_HOME=/data/cache
 
 # PHPファイルをコピー
-COPY index.php api.php .htaccess /var/www/html/
+COPY index.php api.php gemini_helper.php .htaccess /var/www/html/
 
 # ディレクトリの権限を設定（修正: www-dataユーザーに十分な権限を付与）
 RUN chown -R www-data:www-data /var/www/html /data /models && \
@@ -88,10 +88,12 @@ ENV OLLAMA_API_URL="http://host.docker.internal:11434/api/generate"
 ENV OLLAMA_MODEL="llama3"
 
 # 環境変数の設定
-ENV MODEL_SIZE=medium
+ENV MODEL_SIZE=base
 ENV LANGUAGE=ja
 ENV PYTHONPATH=/opt/venv/lib/python3.*/site-packages
 ENV TRANSFORMERS_CACHE=/data/cache/transformers
+ENV GEMINI_API_KEY=""
+ENV GEMINI_MODEL="gemini-1.5-pro"
 
 # Dockerホスト名解決のためのhostsファイル追記スクリプト（Mac/Windows対応）
 RUN echo '#!/bin/bash\n\

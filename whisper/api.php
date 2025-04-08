@@ -6,6 +6,9 @@
  * 文字起こし機能を提供
  */
 
+// Gemini API ヘルパーの読み込み
+require_once __DIR__ . '/gemini_helper.php';
+
 // エラーレポート設定
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -41,6 +44,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['health'])) {
       'language' => getenv('LANGUAGE') ?: 'ja',
       'timestamp' => date('Y-m-d H:i:s')
   ]);
+  exit;
+}
+
+// 要約エンドポイント
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['summarize'])) {
+  header('Content-Type: application/json');
+
+  try {
+    // リクエストボディの取得
+    $requestData = json_decode(file_get_contents('php://input'), true);
+
+    if (!isset($requestData['text']) || empty($requestData['text'])) {
+      throw new Exception('テキストが指定されていません');
+    }
+
+    $text = $requestData['text'];
+    $language = $requestData['language'] ?? (getenv('LANGUAGE') ?: 'ja');
+    $correctText = isset($requestData['correct']) ? (bool)$requestData['correct'] : true;
+
+    // Gemini APIキーの取得
+    $apiKey = getenv('GEMINI_API_KEY');
+
+    // Geminiモデルの取得（環境変数から）
+    $model = getenv('GEMINI_MODEL') ?: 'gemini-1.5-pro';
+
+    if ($correctText) {
+      // 文章の補正と要約を実行
+      $result = correctAndSummarizeText($text, $language, $apiKey, $model);
+
+      if ($result['success']) {
+        echo json_encode([
+            'success' => true,
+            'corrected_text' => $result['corrected_text'],
+            'summary' => $result['summary'],
+            'model' => $model // どのモデルが使用されたかをクライアントに通知
+        ], JSON_UNESCAPED_UNICODE);
+      } else {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $result['error']
+        ], JSON_UNESCAPED_UNICODE);
+      }
+    } else {
+      // 要約のみを実行
+      $result = summarizeText($text, $language, $apiKey, $model);
+
+      if ($result['success']) {
+        echo json_encode([
+            'success' => true,
+            'summary' => $result['summary'],
+            'model' => $model // どのモデルが使用されたかをクライアントに通知
+        ], JSON_UNESCAPED_UNICODE);
+      } else {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $result['error']
+        ], JSON_UNESCAPED_UNICODE);
+      }
+    }
+  } catch (Exception $e) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
+  }
+
   exit;
 }
 
@@ -248,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $readmeContent .= "- $textFilename - 文字起こしテキスト\n";
         $readmeContent .= "- $transcriptionFilename - 文字起こし詳細情報（JSON）\n";
 
-        $tempReadmePath = $tmpDir . '/README.md';
+        $tempReadmePath = $workDir . '/README.md';
         file_put_contents($tempReadmePath, $readmeContent);
         $zip->addFile($tempReadmePath, 'README.md');
 
@@ -268,7 +340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($tempReadmePath) && file_exists($tempReadmePath)) {
       unlink($tempReadmePath);
     }
-    rmdir($tmpDir);
+    rmdir($workDir);
 
     // 結果を返却
     logMessage("文字起こしが完了しました。処理時間: {$result['processing_time']}秒");

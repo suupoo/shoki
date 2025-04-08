@@ -159,6 +159,9 @@
           <button type="button" data-tab="segments" class="result-tab border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm">
             セグメント
           </button>
+          <button type="button" data-tab="summary" class="result-tab border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm">
+            要約
+          </button>
         </nav>
       </div>
 
@@ -218,6 +221,120 @@
             </div>
           </div>
         </div>
+
+        <!-- 要約結果 -->
+        <div id="summaryTab" class="result-content hidden">
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-lg font-medium text-gray-900">文章補正と要約</h2>
+              <div class="flex space-x-2">
+                <button id="generateSummary" class="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded text-sm flex items-center">
+                  <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                  </svg>
+                  生成
+                </button>
+                <button id="copySummary" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm flex items-center">
+                  <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                  コピー
+                </button>
+                <button id="downloadSummary" class="px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded text-sm flex items-center">
+                  <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                  </svg>
+                  ダウンロード
+                </button>
+              </div>
+            </div>
+
+            <!-- 補正オプション -->
+            <div class="mb-4 bg-gray-50 p-3 rounded border border-gray-200">
+              <label class="flex items-center">
+                <input type="checkbox" id="enableCorrection" class="form-checkbox h-4 w-4 text-indigo-600" checked>
+                <span class="ml-2 text-sm text-gray-700">AIによる文章補正を有効にする</span>
+              </label>
+              <p class="text-xs text-gray-500 mt-1">オンにすると、文字起こし結果を自然な文章に補正した上で要約します。より正確な結果が得られますが、処理時間が長くなります。</p>
+            </div>
+
+            <!-- 補正オプションの下にモデル選択を追加 -->
+            <div class="mb-4 bg-gray-50 p-3 rounded border border-gray-200">
+              <label class="flex items-center">
+                <input type="checkbox" id="enableCorrection" class="form-checkbox h-4 w-4 text-indigo-600" checked>
+                <span class="ml-2 text-sm text-gray-700">AIによる文章補正を有効にする</span>
+              </label>
+              <p class="text-xs text-gray-500 mt-1">オンにすると、文字起こし結果を自然な文章に補正した上で要約します。より正確な結果が得られますが、処理時間が長くなります。</p>
+
+              <!-- モデル選択ドロップダウン -->
+              <div class="mt-3">
+                <label for="geminiModel" class="block text-xs font-medium text-gray-700">Geminiモデル</label>
+                <select id="geminiModel" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro (高性能・低速)</option>
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash (中性能・高速)</option>
+                  <option value="gemini-1.0-pro">Gemini 1.0 Pro (旧モデル)</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">注: 環境変数の設定がある場合は環境変数が優先されます</p>
+              </div>
+            </div>
+
+            <!-- ローディングインジケーター -->
+            <div id="summaryLoading" class="hidden">
+              <div class="flex justify-center items-center py-8">
+                <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="ml-3 text-gray-600">処理中...</span>
+              </div>
+            </div>
+
+            <!-- 補正結果表示エリア -->
+            <div id="correctedTextSection" class="mb-6 hidden">
+              <h3 class="text-sm font-medium text-gray-700 mb-2">補正された文章</h3>
+              <div class="relative">
+                <div id="correctedTextContent" class="prose prose-indigo max-w-none p-4 bg-gray-50 rounded border border-gray-200 text-sm"></div>
+                <button id="copyCorrectedText" class="absolute top-2 right-2 p-1 bg-white rounded border border-gray-200 text-gray-500 hover:bg-gray-100">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- 要約結果表示エリア -->
+            <div id="summarySection" class="hidden">
+              <h3 class="text-sm font-medium text-gray-700 mb-2">要約</h3>
+              <div id="summaryContent" class="prose prose-indigo max-w-none p-4 bg-gray-50 rounded border border-gray-200 text-sm"></div>
+            </div>
+
+            <!-- APIキーなしの場合のメッセージ -->
+            <div id="summaryApiKeyMissing" class="hidden text-center py-8 text-gray-500">
+              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              <p class="mt-2">Gemini APIキーが設定されていません。</p>
+              <p class="text-sm">補正・要約機能を使用するには、.envファイルに有効なGEMINI_API_KEYを設定してください。</p>
+            </div>
+
+            <!-- エラーメッセージ -->
+            <div id="summaryError" class="hidden text-center py-8 text-red-500">
+              <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <p class="mt-2" id="summaryErrorMessage">処理中にエラーが発生しました。</p>
+            </div>
+
+            <!-- 要約がまだない場合のメッセージ -->
+            <div id="summaryNotAvailable" class="text-center py-8 text-gray-500">
+              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <p class="mt-2">処理はまだ生成されていません。</p>
+              <p class="text-sm">「生成」ボタンをクリックして文字起こし内容から補正と要約を生成できます。</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- アクションボタン -->
@@ -269,6 +386,22 @@
         const transcriptionInfo = document.getElementById('transcriptionInfo');
         const segmentsTableBody = document.getElementById('segmentsTableBody');
 
+        // 要約関連の要素
+        const summaryContent = document.getElementById('summaryContent');
+        const correctedTextContent = document.getElementById('correctedTextContent');
+        const correctedTextSection = document.getElementById('correctedTextSection');
+        const summarySection = document.getElementById('summarySection');
+        const summaryNotAvailable = document.getElementById('summaryNotAvailable');
+        const summaryApiKeyMissing = document.getElementById('summaryApiKeyMissing');
+        const summaryError = document.getElementById('summaryError');
+        const summaryErrorMessage = document.getElementById('summaryErrorMessage');
+        const summaryLoading = document.getElementById('summaryLoading');
+        const generateSummary = document.getElementById('generateSummary');
+        const copySummary = document.getElementById('copySummary');
+        const copyCorrectedText = document.getElementById('copyCorrectedText');
+        const downloadSummary = document.getElementById('downloadSummary');
+        const enableCorrection = document.getElementById('enableCorrection');
+        const geminiModel = document.getElementById('geminiModel');
         // コピー・ダウンロードボタン
         const copyTranscription = document.getElementById('copyTranscription');
         const downloadTranscription = document.getElementById('downloadTranscription');
@@ -277,6 +410,8 @@
 
         // グローバル変数
         let currentResults = null;
+        let hasSummary = false;
+        let hasCorrectedText = false;
 
         // ファイルアップロードの処理
         audioFileInput.addEventListener('change', function() {
@@ -459,7 +594,7 @@
                 });
         });
 
-        // 結果の表示関数
+        // 結果の表示
         function displayResults(data) {
             // 文字起こし結果
             if (data.text) {
@@ -467,8 +602,34 @@
                 transcriptionInfo.textContent = `処理時間: ${data.processing_time}秒 | 言語: ${data.language || 'ja'}`;
             }
 
+            // 補正テキストと要約結果がある場合（既に生成されている場合）
+            if (data.corrected_text) {
+                correctedTextContent.innerHTML = formatMarkdown(data.corrected_text);
+                correctedTextSection.classList.remove('hidden');
+                hasCorrectedText = true;
+            } else {
+                // 補正テキストがまだない場合
+                correctedTextSection.classList.add('hidden');
+                hasCorrectedText = false;
+            }
+
+            if (data.summary) {
+                summaryContent.innerHTML = formatMarkdown(data.summary);
+                summarySection.classList.remove('hidden');
+                summaryNotAvailable.classList.add('hidden');
+                summaryApiKeyMissing.classList.add('hidden');
+                summaryError.classList.add('hidden');
+                hasSummary = true;
+            } else {
+                // 要約がまだない場合
+                summarySection.classList.add('hidden');
+                summaryNotAvailable.classList.remove('hidden');
+                summaryApiKeyMissing.classList.add('hidden');
+                summaryError.classList.add('hidden');
+                hasSummary = false;
+            }
+
             // セグメント情報
-            console.log(data);
             if (data.segments && data.segments.length > 0) {
                 // 話者ラベルの取得
                 const speakerLabels = data.speaker_labels || [];
@@ -500,7 +661,7 @@
                     segmentsTableBody.appendChild(row);
                 });
             } else {
-                // セグメントデータがない場合の処理
+                // セグメント情報がない場合
                 segmentsTableBody.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-gray-500">セグメント情報がありません</td></tr>';
             }
         }
@@ -515,6 +676,8 @@
 
         // マークダウンのフォーマット関数
         function formatMarkdown(text) {
+            if (!text) return '';
+
             // 箇条書きの処理
             let formatted = text.replace(/^- (.+)$/gm, '<li>$1</li>');
             if (formatted.includes('<li>')) {
@@ -523,6 +686,7 @@
 
             // 改行の処理
             formatted = formatted.replace(/\n\n/g, '<br><br>');
+            formatted = formatted.replace(/\n/g, '<br>');
 
             return formatted;
         }
@@ -539,6 +703,159 @@
             if (currentResults && currentResults.text) {
                 downloadText(currentResults.text, 'transcription.txt');
             }
+        });
+
+        // 要約の生成
+        generateSummary.addEventListener('click', async () => {
+            // 文字起こし結果がない場合
+            if (!currentResults || !currentResults.text) {
+                showToast('文字起こし結果がありません');
+                return;
+            }
+
+            // ローディング表示
+            summaryContent.innerHTML = '';
+            correctedTextContent.innerHTML = '';
+            summarySection.classList.add('hidden');
+            correctedTextSection.classList.add('hidden');
+            summaryNotAvailable.classList.add('hidden');
+            summaryApiKeyMissing.classList.add('hidden');
+            summaryError.classList.add('hidden');
+            summaryLoading.classList.remove('hidden');
+
+            try {
+                // 補正フラグの取得
+                const correctText = enableCorrection.checked;
+
+                // モデル選択を取得
+                const selectedModel = geminiModel ? geminiModel.value : null;
+
+                // 要約APIの呼び出し
+                const response = await fetch('api.php?summarize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: currentResults.text,
+                        language: currentResults.language || 'ja',
+                        correct: correctText,
+                        model: selectedModel
+                    })
+                });
+
+                const result = await response.json();
+
+                // ローディング非表示
+                summaryLoading.classList.add('hidden');
+
+                if (response.ok && result.success) {
+                    // 補正テキストがある場合は表示
+                    if (result.corrected_text) {
+                        correctedTextContent.innerHTML = formatMarkdown(result.corrected_text);
+                        correctedTextSection.classList.remove('hidden');
+                        currentResults.corrected_text = result.corrected_text;
+                        hasCorrectedText = true;
+                    }
+
+                    // 要約の表示
+                    if (result.summary) {
+                        summaryContent.innerHTML = formatMarkdown(result.summary);
+                        summarySection.classList.remove('hidden');
+                        currentResults.summary = result.summary;
+                        hasSummary = true;
+                    }
+
+                    // 使用されたモデルを表示（オプション）
+                    if (result.model) {
+                        const modelInfo = document.createElement('div');
+                        modelInfo.className = 'text-xs text-gray-500 mt-2';
+                        modelInfo.textContent = `使用モデル: ${result.model}`;
+                        summarySection.appendChild(modelInfo);
+                    }
+
+                    // タブの自動選択
+                    const summaryTab = document.querySelector('[data-tab="summary"]');
+                    if (summaryTab) {
+                        summaryTab.click();
+                    }
+
+                    showToast(correctText ? '補正と要約が完了しました' : '要約が完了しました');
+                } else if (result.error && result.error.includes('APIキー')) {
+                    // APIキーがない場合
+                    summaryApiKeyMissing.classList.remove('hidden');
+                } else {
+                    // その他のエラー
+                    summaryErrorMessage.textContent = result.error || '処理中にエラーが発生しました';
+                    summaryError.classList.remove('hidden');
+                }
+            } catch (error) {
+                // 例外発生時
+                summaryLoading.classList.add('hidden');
+                summaryErrorMessage.textContent = '通信エラーが発生しました: ' + error.message;
+                summaryError.classList.remove('hidden');
+            }
+        });
+
+        // 要約コピーボタン
+        copySummary.addEventListener('click', () => {
+            if (!hasSummary) {
+                showToast('要約がありません');
+                return;
+            }
+
+            const textToCopy = summaryContent.innerText;
+            copyTextToClipboard(textToCopy);
+            showToast('要約をコピーしました');
+        });
+
+        // 要約ダウンロードボタン
+        downloadSummary.addEventListener('click', () => {
+            if (!currentResults) {
+                showToast('データがありません');
+                return;
+            }
+
+            let content = '';
+            let filename = 'shoki_output.txt';
+
+            if (hasCorrectedText && hasSummary) {
+                content = `# 補正テキスト\n\n${currentResults.corrected_text}\n\n# 要約\n\n${currentResults.summary}`;
+                filename = 'shoki_corrected_and_summary.md';
+            } else if (hasCorrectedText) {
+                content = currentResults.corrected_text;
+                filename = 'shoki_corrected.txt';
+            } else if (hasSummary) {
+                content = currentResults.summary;
+                filename = 'shoki_summary.txt';
+            } else {
+                showToast('ダウンロードするデータがありません');
+                return;
+            }
+
+            downloadText(content, filename);
+        });
+
+        // クリップボードにテキストをコピーする関数
+        function copyTextToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+
+        // 補正テキストのコピーボタン
+        copyCorrectedText.addEventListener('click', () => {
+            if (!hasCorrectedText) {
+                showToast('補正テキストがありません');
+                return;
+            }
+
+            const textToCopy = correctedTextContent.innerText;
+            copyTextToClipboard(textToCopy);
+            showToast('補正テキストをコピーしました');
         });
 
         exportSegments.addEventListener('click', () => {

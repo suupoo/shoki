@@ -11,9 +11,11 @@ services:
     ports:
       - "${PORT:-9999}:80"
     environment:
-      - MODEL_SIZE=${MODEL_SIZE:-medium}
+      - MODEL_SIZE=${MODEL_SIZE:-base}
       - LANGUAGE=${LANGUAGE:-ja}
       - APP_NAME=SHOKI
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-pro}
     restart: unless-stopped
     entrypoint: >
       bash -c "
