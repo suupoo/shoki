@@ -67,7 +67,7 @@ RUN echo "upload_max_filesize = 500M" > /usr/local/etc/php/conf.d/uploads.ini \
 RUN echo "date.timezone = Asia/Tokyo" >> /usr/local/etc/php/conf.d/timezone.ini
 
 # ディレクトリの作成
-RUN mkdir -p /models /data /data/uploads /data/processed /data/exports /data/logs /data/config /data/cache /data/archives
+RUN mkdir -p /data /data/uploads /data/processed /data/exports /data/logs /data/config /data/cache /data/archives
 
 # scriptsディレクトリの作成
 RUN mkdir -p /var/www/html/scripts
@@ -75,17 +75,9 @@ RUN mkdir -p /var/www/html/scripts
 # キャッシュディレクトリの作成と権限設定（Permission denied問題を解決）
 ENV XDG_CACHE_HOME=/data/cache
 
-# PHPファイルをコピー
-COPY index.php api.php gemini_helper.php .htaccess /var/www/html/
-
-# ディレクトリの権限を設定（修正: www-dataユーザーに十分な権限を付与）
-RUN chown -R www-data:www-data /var/www/html /data /models && \
-    chmod -R 775 /data /models
-
-# Ollama API設定
-ENV USE_OLLAMA="true"
-ENV OLLAMA_API_URL="http://host.docker.internal:11434/api/generate"
-ENV OLLAMA_MODEL="llama3"
+# ディレクトリの権限を設定
+RUN chown -R www-data:www-data /var/www/html /data && \
+    chmod -R 775 /data
 
 # 環境変数の設定
 ENV MODEL_SIZE=base

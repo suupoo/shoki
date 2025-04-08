@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./data:/data
-      - ./models:/models
+      - ./src:/var/www/html  # srcディレクトリをウェブルートにマウント
     ports:
       - "${PORT:-9999}:80"
     environment:
@@ -20,10 +20,10 @@ services:
     entrypoint: >
       bash -c "
         mkdir -p /data/uploads /data/processed /data/exports /data/logs /data/config /data/cache /data/archives &&
-        chown -R www-data:www-data /data /models &&
-        chmod -R 775 /data /models &&
+        chown -R www-data:www-data /data /var/www/html &&
+        chmod -R 775 /data /var/www/html &&
         /usr/local/bin/docker-entrypoint.sh
       "
 
 volumes:
-  models:
+  data:

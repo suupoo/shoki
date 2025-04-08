@@ -35,6 +35,95 @@
     <p class="text-gray-600 mt-2">AIが音声を文字起こしします</p>
   </header>
 
+  <div class="max-w-3xl mx-auto mt-6 mb-10">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">ツールとリソース</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- 要約ツールへのリンク -->
+      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow p-4 border border-indigo-100">
+        <div class="flex items-start">
+          <div class="bg-indigo-100 rounded-full p-2 mr-3">
+            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-medium text-indigo-900">テキスト要約ツール</h3>
+            <p class="text-sm text-indigo-700 mt-1 mb-3">文字起こしとは別に、任意のテキストをAIで要約できます</p>
+            <a href="summarize.php" class="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800">
+              ツールを開く
+              <svg class="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 過去の履歴へのリンク -->
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow p-4 border border-green-100">
+        <div class="flex items-start">
+          <div class="bg-green-100 rounded-full p-2 mr-3">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-medium text-green-900">処理履歴</h3>
+            <p class="text-sm text-green-700 mt-1 mb-3">過去に処理した文字起こし結果を表示します</p>
+            <button id="showHistoryBtn" class="inline-flex items-center text-sm font-medium text-green-600 hover:text-green-800">
+              履歴を表示
+              <svg class="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 過去の処理履歴セクション -->
+    <div id="historySection" class="mt-6 bg-white rounded-xl shadow-md p-5 hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-medium text-gray-900">過去の文字起こし履歴</h2>
+        <button id="refreshHistoryBtn" class="p-1 text-gray-400 hover:text-gray-600 rounded">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div id="historyLoading" class="text-center py-4 hidden">
+        <svg class="animate-spin h-6 w-6 mx-auto text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="text-sm text-gray-500 mt-2">履歴を読み込み中...</p>
+      </div>
+
+      <div id="historyEmpty" class="text-center py-6 hidden">
+        <svg class="w-10 h-10 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <p class="text-gray-500 mt-2">まだ文字起こし履歴がありません</p>
+      </div>
+
+      <div id="historyError" class="text-center py-4 hidden">
+        <svg class="w-10 h-10 mx-auto text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <p class="text-red-500 mt-2" id="historyErrorMessage">履歴の読み込み中にエラーが発生しました</p>
+      </div>
+
+      <!-- 履歴リスト -->
+      <div id="historyList" class="divide-y divide-gray-200">
+        <!-- 履歴項目がJSで追加される -->
+      </div>
+    </div>
+  </div>
+
   <!-- メインコンテンツ -->
   <div class="max-w-3xl mx-auto">
     <!-- メインカード -->
@@ -90,6 +179,55 @@
                 <option value="de">ドイツ語</option>
                 <option value="es">スペイン語</option>
               </select>
+            </div>
+          </div>
+
+          <!-- 要約オプションセクション -->
+          <div class="border rounded-lg p-4 bg-blue-50 mt-4">
+            <div class="flex items-center mb-2">
+              <svg class="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <h3 class="text-sm font-medium text-blue-900">要約オプション</h3>
+            </div>
+
+            <div class="mb-3">
+              <label class="flex items-center">
+                <input type="checkbox" id="enableSummarize" name="summarize_options[enabled]" class="form-checkbox h-4 w-4 text-blue-600">
+                <span class="ml-2 text-sm text-gray-700">文字起こし後に自動要約する</span>
+              </label>
+              <p class="text-xs text-gray-600 mt-1">オンにすると、文字起こし完了後に自動的に要約を生成します</p>
+            </div>
+
+            <div class="mb-3">
+              <label class="flex items-center">
+                <input type="checkbox" id="enableAutoCorrection" name="summarize_options[correct]" class="form-checkbox h-4 w-4 text-blue-600" checked>
+                <span class="ml-2 text-sm text-gray-700">AIによる文章補正を有効にする</span>
+              </label>
+              <p class="text-xs text-gray-600 mt-1">オンにすると、文字起こし結果を自然な文章に補正した上で要約します</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+              <div>
+                <label for="summaryFormat" class="block text-xs font-medium text-gray-700">要約フォーマット</label>
+                <select id="summaryFormat" name="summarize_options[format]" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                  <option value="standard">標準 (段落形式)</option>
+                  <option value="bullet">箇条書き</option>
+                  <option value="headline">見出し形式</option>
+                  <option value="qa">Q&A形式</option>
+                  <option value="executive">エグゼクティブサマリー</option>
+                  <option value="meeting">会議議事録</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="summarizeModel" class="block text-xs font-medium text-gray-700">Geminiモデル</label>
+                <select id="summarizeModel" name="summarize_options[model]" class="mt-1 block w-full pl-3 pr-10 py-1 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                  <option value="gemini-1.5-flash" selected>Gemini 1.5 Flash (高速)</option>
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro (高性能)</option>
+                  <option value="gemini-pro">Gemini Pro (旧モデル)</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -346,6 +484,15 @@
               <p class="mt-2">処理はまだ生成されていません。</p>
               <p class="text-sm">「生成」ボタンをクリックして文字起こし内容から補正と要約を生成できます。</p>
             </div>
+
+            `<div class="mt-2 flex justify-end">
+              <button id="regenerateSummaryBtn" class="px-3 py-1 bg-green-50 hover:bg-green-100 text-green-600 rounded text-sm flex items-center mr-2">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                要約のみ再生成
+              </button>
+            </div>`
           </div>
         </div>
       </div>
@@ -391,6 +538,7 @@
         const resultsContainer = document.getElementById('resultsContainer');
         const resetBtn = document.getElementById('resetBtn');
         const submitBtn = document.getElementById('submitBtn');
+        const regenerateSummaryBtn = document.getElementById('regenerateSummaryBtn');
 
         // 結果タブ関連の要素
         const resultTabs = document.querySelectorAll('.result-tab');
@@ -398,6 +546,33 @@
         const transcriptionText = document.getElementById('transcriptionText');
         const transcriptionInfo = document.getElementById('transcriptionInfo');
         const segmentsTableBody = document.getElementById('segmentsTableBody');
+
+        // 履歴表示関連の要素を取得
+        const showHistoryBtn = document.getElementById('showHistoryBtn');
+        const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+        const historySection = document.getElementById('historySection');
+        const historyLoading = document.getElementById('historyLoading');
+        const historyEmpty = document.getElementById('historyEmpty');
+        const historyError = document.getElementById('historyError');
+        const historyErrorMessage = document.getElementById('historyErrorMessage');
+        const historyList = document.getElementById('historyList');
+
+        // 履歴表示ボタンのイベント
+        if (showHistoryBtn) {
+            showHistoryBtn.addEventListener('click', () => {
+                historySection.classList.toggle('hidden');
+
+                // 初回表示時に履歴を読み込む
+                if (!historySection.classList.contains('hidden') && historyList.children.length === 0) {
+                    loadTranscriptionHistory();
+                }
+            });
+        }
+
+        // 履歴更新ボタンのイベント
+        if (refreshHistoryBtn) {
+            refreshHistoryBtn.addEventListener('click', loadTranscriptionHistory);
+        }
 
         // 要約関連の要素
         const summaryContent = document.getElementById('summaryContent');
@@ -814,6 +989,90 @@
             }
         });
 
+        // 要約のみを再度生成するボタンの処理
+        regenerateSummaryBtn.addEventListener('click', async () => {
+            // 文字起こし結果がない場合
+            if (!currentResults || !currentResults.text) {
+                showToast('文字起こし結果がありません');
+                return;
+            }
+
+            // 補正済みテキストがない場合
+            if (!hasCorrectedText) {
+                showToast('先に補正テキストを生成してください');
+                return;
+            }
+
+            // ローディング表示
+            summaryContent.innerHTML = '';
+            summarySection.classList.add('hidden');
+            summaryNotAvailable.classList.add('hidden');
+            summaryApiKeyMissing.classList.add('hidden');
+            summaryError.classList.add('hidden');
+            summaryLoading.classList.remove('hidden');
+
+            try {
+                // フォーマット選択の取得
+                const selectedFormat = document.getElementById('summaryFormat').value;
+
+                // モデル選択を取得
+                const selectedModel = geminiModel ? geminiModel.value : null;
+
+                // 要約APIの呼び出し（要約のみのモード）
+                const response = await fetch('api.php?summarize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: currentResults.text,
+                        corrected_text: currentResults.corrected_text,
+                        language: currentResults.language || 'ja',
+                        model: selectedModel,
+                        format: selectedFormat,
+                        summarize_only: true
+                    })
+                });
+
+                const result = await response.json();
+
+                // ローディング非表示
+                summaryLoading.classList.add('hidden');
+
+                if (response.ok && result.success) {
+                    // 要約の表示
+                    if (result.summary) {
+                        summaryContent.innerHTML = formatMarkdown(result.summary);
+                        summarySection.classList.remove('hidden');
+                        currentResults.summary = result.summary;
+                        hasSummary = true;
+                    }
+
+                    // 使用されたモデルを表示（オプション）
+                    if (result.model) {
+                        const modelInfo = document.createElement('div');
+                        modelInfo.className = 'text-xs text-gray-500 mt-2';
+                        modelInfo.textContent = `使用モデル: ${result.model}`;
+                        summarySection.appendChild(modelInfo);
+                    }
+
+                    showToast('要約が再生成されました');
+                } else if (result.error && result.error.includes('APIキー')) {
+                    // APIキーがない場合
+                    summaryApiKeyMissing.classList.remove('hidden');
+                } else {
+                    // その他のエラー
+                    summaryErrorMessage.textContent = result.error || '処理中にエラーが発生しました';
+                    summaryError.classList.remove('hidden');
+                }
+            } catch (error) {
+                // 例外発生時
+                summaryLoading.classList.add('hidden');
+                summaryErrorMessage.textContent = '通信エラーが発生しました: ' + error.message;
+                summaryError.classList.remove('hidden');
+            }
+        });
+
         // 要約コピーボタン
         copySummary.addEventListener('click', () => {
             if (!hasSummary) {
@@ -986,6 +1245,128 @@
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => document.body.removeChild(toast), 300);
             }, 3000);
+        }
+
+        // 文字起こし履歴を読み込む関数
+        function loadTranscriptionHistory() {
+            // 状態をリセット
+            historyLoading.classList.remove('hidden');
+            historyEmpty.classList.add('hidden');
+            historyError.classList.add('hidden');
+            historyList.innerHTML = '';
+
+            // processed ディレクトリ内のJSONファイルを取得するAPIリクエスト
+            fetch('api.php?list_transcriptions=1')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('APIレスポンスエラー');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    historyLoading.classList.add('hidden');
+
+                    if (data.success) {
+                        const transcriptions = data.transcriptions || [];
+
+                        // 履歴がない場合
+                        if (transcriptions.length === 0) {
+                            historyEmpty.classList.remove('hidden');
+                            return;
+                        }
+
+                        // 履歴を表示
+                        transcriptions.forEach(item => {
+                            const historyItem = createHistoryItem(item);
+                            historyList.appendChild(historyItem);
+                        });
+                    } else {
+                        throw new Error(data.error || '履歴の取得に失敗しました');
+                    }
+                })
+                .catch(error => {
+                    historyLoading.classList.add('hidden');
+                    historyErrorMessage.textContent = error.message;
+                    historyError.classList.remove('hidden');
+                });
+        }
+
+        // 履歴項目のHTML要素を作成する関数
+        function createHistoryItem(item) {
+            const date = new Date(item.date);
+            const formattedDate = date.toLocaleString('ja-JP');
+
+            const div = document.createElement('div');
+            div.className = 'py-4 flex items-center hover:bg-gray-50 rounded';
+
+            let durationText = '';
+            if (item.duration) {
+                const minutes = Math.floor(item.duration / 60);
+                const seconds = item.duration % 60;
+                durationText = `${minutes}分${seconds}秒`;
+            }
+
+            div.innerHTML = `
+      <div class="mr-4 flex-shrink-0">
+        <svg class="h-10 w-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+        </svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-gray-900 truncate">${item.file_name || '名称なし'}</p>
+        <p class="text-sm text-gray-500">${formattedDate} ${durationText ? `・ ${durationText}` : ''}</p>
+      </div>
+      <div>
+        <button class="load-history-btn px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded text-sm" data-id="${item.id}">
+          読み込む
+        </button>
+      </div>
+    `;
+
+            // 読み込みボタンのイベントを追加
+            const loadBtn = div.querySelector('.load-history-btn');
+            loadBtn.addEventListener('click', () => {
+                loadTranscriptionData(item.id);
+            });
+
+            return div;
+        }
+
+        // 選択した履歴データを読み込む関数
+        function loadTranscriptionData(id) {
+            // ローディング表示
+            historySection.classList.add('hidden');
+            processingContainer.classList.remove('hidden');
+            form.parentNode.parentNode.classList.add('hidden');
+
+            // APIリクエスト
+            fetch(`api.php?load_transcription=${id}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('APIレスポンスエラー');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // 過去のデータを表示
+                        processingContainer.classList.add('hidden');
+                        resultsContainer.classList.remove('hidden');
+
+                        // グローバル変数に結果を保存
+                        currentResults = data.data;
+
+                        // 結果を表示
+                        displayResults(data.data);
+                    } else {
+                        throw new Error(data.error || 'データの読み込みに失敗しました');
+                    }
+                })
+                .catch(error => {
+                    processingContainer.classList.add('hidden');
+                    showToast('エラー: ' + error.message);
+                    form.parentNode.parentNode.classList.remove('hidden');
+                });
         }
     });
 </script>
