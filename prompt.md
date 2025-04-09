@@ -2,7 +2,7 @@
 
 ## システム概要
 
-SHOKIは、OpenAI Whisperを使用した音声文字起こしシステムで、Gemini APIを使用して文字起こし結果の補正と要約を実行します。この文書は、Claude向けにシステム仕様を解説するためのプロンプトファイルです。
+SHOKIは、OpenAI Whisperを使用した音声文字起こしシステムで、Gemini APIを使用して文字起こし結果の補正と要約を実行します。この文書は、システム仕様を説明するためのプロンプトファイルです。
 
 ## 主要機能
 
@@ -79,61 +79,11 @@ services:
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
 ```
 
-### 3. テキスト分割処理
-長いテキストを処理する際の500エラーを回避するため、テキストを適切なサイズに分割して処理します：
+### 3. APIエンドポイント設計
 
-```php
-function processLongText($text, $maxChunkSize = 4000, $processFunction, $processArgs = []) {
-    // テキストが短い場合はそのまま処理
-    if (mb_strlen($text) <= $maxChunkSize) {
-        return call_user_func_array($processFunction, array_merge([$text], $processArgs));
-    }
+`api.php`は以下の主要なエンドポイントを提供します：
 
-    // テキストを段落で分割
-    $paragraphs = preg_split('/\n\s*\n/', $text, -1, PREG_SPLIT_NO_EMPTY);
-
-    // チャンク処理ロジック...
-
-    // 各チャンクを処理して結果を取得
-    $results = [];
-    foreach ($chunks as $index => $chunk) {
-        // APIレート制限を考慮して少し待機
-        if ($index > 0) {
-            usleep(500000); // 0.5秒待機
-        }
-
-        // 処理と結果の格納...
-    }
-
-    // 結果のマージ
-    return mergeProcessedResults($results);
-}
-```
-
-### 4. 要約フォーマット
-システムは以下の要約フォーマットをサポートしています：
-
-```php
-$formats = [
-    'standard' => '文章を要約して段落形式で出力してください。',
-    'bullet' => '文章を要約して、重要なポイントを箇条書き（- で始まる行）形式で出力してください。',
-    'headline' => '文章を要約して、主要な話題を「## 見出し」形式で示し、各見出しの下に簡潔な説明を追加してください。',
-    'qa' => '文章の内容に基づいて、重要なポイントを質問と回答の形式でまとめてください。各質問は「Q:」で始め、回答は「A:」で始めてください。',
-    'executive' => 'ビジネス文書のエグゼクティブサマリーとして、目的、結論、推奨事項を含む簡潔な要約を作成してください。',
-    'meeting' => '会議議事録形式の詳細なプロンプト...'
-];
-```
-
-### 5. Geminiモデル選択
-環境変数またはUIから選択可能な以下のモデルをサポートしています：
-
-- `gemini-1.5-flash`：高速処理向け（デフォルト推奨）
-- `gemini-1.5-pro`：高精度処理向け
-- `gemini-pro`：旧モデル（安定性重視）
-
-## APIエンドポイント
-
-### 1. 文字起こしと要約
+#### 文字起こしエンドポイント
 ```
 POST /api.php
 Content-Type: multipart/form-data
@@ -143,9 +93,9 @@ Content-Type: multipart/form-data
 [要約オプション]
 ```
 
-### 2. 独立要約ツール
+#### 要約エンドポイント
 ```
-POST /summarize.php
+POST /api.php?summarize
 Content-Type: application/json
 
 {
@@ -156,15 +106,119 @@ Content-Type: application/json
 }
 ```
 
-### 3. 履歴一覧取得
+#### 履歴一覧取得
 ```
 GET /api.php?list_transcriptions=1
 ```
 
-### 4. 特定の文字起こし結果取得
+#### 特定の文字起こし結果取得
 ```
 GET /api.php?load_transcription=SESSION_ID
 ```
+
+### 4. テキスト分割処理
+長いテキストを処理する際の500エラーを回避するため、テキストを適切なサイズに分割して処理します：
+
+```php
+// processTranscription関数内
+function processLongText($text, $maxChunkSize = 4000, $processFunction, $processArgs = []) {
+  // テキストが短い場合はそのまま処理
+  if (mb_strlen($text) <= $maxChunkSize) {
+    return call_user_func_array($processFunction, array_merge([$text], $processArgs));
+  }
+
+  // テキストを段落で分割
+  $paragraphs = preg_split('/\n\s*\n/', $text, -1, PREG_SPLIT_NO_EMPTY);
+
+  // チャンク処理ロジック...
+
+  // 各チャンクを処理して結果を取得
+  $results = [];
+  foreach ($chunks as $index => $chunk) {
+    // APIレート制限を考慮して少し待機
+    if ($index > 0) {
+      usleep(500000); // 0.5秒待機
+    }
+
+    // 処理と結果の格納...
+  }
+
+  // 結果のマージ
+  return mergeProcessedResults($results);
+}
+```
+
+### 5. エラーハンドリング
+システムはより効率的なエラーハンドリングを実装しています：
+
+```php
+// エラーレスポンスを返す共通関数
+function sendErrorResponse($message, $statusCode = 500) {
+  logMessage("エラー: " . $message);
+  sendJsonResponse(['error' => $message], $statusCode);
+}
+
+// ログ記録関数
+function logMessage($message) {
+  global $logFile;
+  $timestamp = date('Y-m-d H:i:s');
+  file_put_contents($logFile, "[{$timestamp}] {$message}" . PHP_EOL, FILE_APPEND);
+}
+```
+
+### 6. 要約フォーマット
+システムは以下の要約フォーマットをサポートしています：
+
+```php
+$formats = [
+    'standard' => [
+        'name' => '標準',
+        'description' => '通常の段落形式の要約',
+        'prompt_suffix' => '文章を要約して段落形式で出力してください。'
+    ],
+    'bullet' => [
+        'name' => '箇条書き',
+        'description' => '要点を箇条書きでまとめた要約',
+        'prompt_suffix' => '文章を要約して、重要なポイントを箇条書き（- で始まる行）形式で出力してください。'
+    ],
+    'headline' => [
+        'name' => '見出し形式',
+        'description' => '見出しと説明文の形式でまとめた要約',
+        'prompt_suffix' => '文章を要約して、主要な話題を「## 見出し」形式で示し、各見出しの下に簡潔な説明を追加してください。'
+    ],
+    // 他のフォーマット...
+];
+```
+
+### 7. Geminiモデル選択
+環境変数またはUIから選択可能な以下のモデルをサポートしています：
+
+- `gemini-1.5-flash`：高速処理向け（デフォルト推奨）
+- `gemini-1.5-pro`：高精度処理向け
+- `gemini-pro`：旧モデル（安定性重視）
+
+## コード最適化
+
+システムは以下の最適化が施されています：
+
+1. **コードモジュール化**: 重複コードを関数化
+   - `parseOptions()` - JSONオプションの解析を統一
+   - `validateAudioFile()` - 音声ファイルの検証を一元化
+   - `createZipArchive()` - ZIPファイル作成を分離
+
+2. **エラー処理の改善**:
+   - `sendJsonResponse()` と `sendErrorResponse()` で一貫したレスポンス
+   - エラーログの整合性向上
+
+3. **リクエスト処理の単純化:**
+   - 主要な文字起こし処理を `processTranscription()` 関数に集約
+   - 履歴取得を `getTranscriptionHistory()` に整理
+   - 要約処理を `processSummarizeRequest()` に整理
+
+4. **コードの可読性:**
+   - 冗長なコメントを削減
+   - 処理フローを明確化
+   - インデントの一貫性
 
 ## 主要なプロンプト設計
 

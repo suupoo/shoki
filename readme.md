@@ -25,7 +25,7 @@ AI技術を活用して音声を文字起こしする「SHOKI」システムで�
 1. リポジトリをクローンまたはファイルをダウンロード
 
 ```bash
-git clone https://github.com/yourusername/shoki.git
+git clone https://github.com/suupoo/shoki.git
 cd shoki
 ```
 
@@ -118,7 +118,63 @@ docker-compose up -d
 - 文字起こし: 2GB以上のRAM
 - 要約処理: 特に追加要件なし
 
-## 5. トラブルシューティング
+## 5. システム構成
+
+### ディレクトリ構造
+```
+SHOKI/
+├── compose.yaml                        # Docker Compose設定
+├── .env                                # 環境変数設定
+├── src/                                # PHPソースコード (コンテナ内の/var/www/html)
+│   ├── helpers                         # ヘルパー関数
+│         ├── ApiHelper.php             # データモデル
+│         ├── SummaryHelper.php         # ファイル管理
+│         └── TextProcessingHelper.php  # Whisper API連携
+│   ├── index.php                       # Webインターフェース
+│   ├── api.php                         # APIエンドポイント
+│   ├── gemini_helper.php               # Gemini API連携
+│   ├── summarize.php                   # 独立要約ツール
+│   └── .htaccess                       # Apache設定
+├── whisper/                            # ビルド関連ファイル
+│   ├── Dockerfile                      # Dockerイメージ定義
+│   └── php.ini                         # PHP設定
+└── data/                               # データディレクトリ
+    ├── uploads/                        # アップロードファイル
+    ├── processed/                      # 処理済みファイル
+    ├── exports/                        # エクスポートファイル
+    ├── logs/                           # ログファイル
+    ├── config/                         # 設定ファイル
+    ├── cache/                          # キャッシュ
+    └── archives/                       # アーカイブ
+```
+
+### 主要なファイルの役割
+
+#### api.php
+- API機能を提供する中核ファイル
+- 文字起こしリクエストを処理する機能
+- 要約リクエストの処理
+- 履歴管理と文字起こしデータの読み込み
+- エラーハンドリングとログ記録
+- ZIPアーカイブの作成
+
+#### gemini_helper.php
+- Gemini APIとの通信機能
+- テキスト分割と大規模テキスト処理
+- 文章補正と要約の処理ロジック
+- 複数フォーマットの要約テンプレート管理
+
+#### summarize.php
+- 独立した要約ツールのインターフェース
+- Gemini APIを使用した要約生成
+- 複数フォーマットでの要約オプション
+
+#### index.php
+- ウェブインターフェースの提供
+- ファイルアップロードと要約フォーム
+- 処理結果の表示と履歴管理
+
+## 6. トラブルシューティング
 
 ### 一般的な問題
 
@@ -150,7 +206,7 @@ rm -rf ./data/cache/*
 docker-compose up -d
 ```
 
-## Gemini API利用について
+## 7. Gemini API利用について
 
 本システムの要約機能はGoogle Gemini APIを使用しています。利用にあたっては以下の点に注意してください：
 
@@ -166,7 +222,37 @@ Gemini APIキーの取得方法：
 3. 「Get API key」からAPIキーを作成
 4. 作成したキーを`.env`ファイルの`GEMINI_API_KEY`に設定
 
-SHOKIシステム自体はMITライセンスで提供されていますが、Gemini APIの利用については上記の条件に従う必要があります。
+## 8. 開発者向け情報
+
+### コード構成
+
+システムのコードは以下の主要なコンポーネントで構成されています：
+
+1. **API処理ロジック**：
+    - リクエスト検証
+    - Python処理連携
+    - ファイル管理
+    - JSONレスポンス生成
+
+2. **Gemini API連携**：
+    - API通信処理
+    - テキスト分析
+    - 長文処理の最適化
+    - フォーマット変換
+
+3. **ウェブインターフェース**：
+    - ファイルアップロード
+    - 処理結果表示
+    - 履歴管理
+    - ユーザー設定
+
+### コード改良
+
+コードの主な改良ポイント：
+- エラーハンドリングを強化し、より詳細なログ記録
+- 重複コードの削減と関数のモジュール化
+- 処理フローの明確化とコードの可読性向上
+- リクエスト検証の強化
 
 ## 謝辞
 
